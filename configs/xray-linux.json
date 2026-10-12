@@ -1,0 +1,130 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "dns": {
+    "servers": [
+      "https://1.1.1.1/dns-query",
+      "https://[2606:4700:4700::1111]/dns-query"
+    ],
+    "queryStrategy": "UseIP"
+  },
+  "inbounds": [
+    {
+      "tag": "tun-in",
+      "port": 0,
+      "protocol": "tun",
+      "settings": {
+        "name": "tun0",
+        "mtu": 1280,
+        "gateway": [
+          "YOUR_VIRTUAL_IPV4_HERE/32",
+          "YOUR_VIRTUAL_IPV6_HERE/128"
+        ],
+        "dns": [
+          "1.1.1.1",
+          "2606:4700:4700::1111"
+        ],
+        "autoSystemRoutingTable": [
+          "0.0.0.0/0",
+          "::/0"
+        ],
+        "autoOutboundsInterface": "auto"
+      }
+    },
+    {
+      "tag": "socks-in",
+      "port": 2080,
+      "listen": "0.0.0.0",
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      }
+    },
+    {
+      "tag": "http-in",
+      "port": 2081,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": {
+        "auth": "noauth"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "warp-out",
+      "protocol": "wireguard",
+      "settings": {
+        "secretKey": "YOUR_PRIVATE_KEY_HERE",
+        "address": [
+          "YOUR_VIRTUAL_IPV4_HERE/32",
+          "YOUR_VIRTUAL_IPV6_HERE/128"
+        ],
+        "reserved": [0, 0, 0],
+        "mtu": 1280,
+        "noKernelTun": false,
+        "peers": [
+          {
+            "endpoint": "CLEAN_WARP_ENDPOINT_IP:PORT",
+            "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+            "keepAlive": 5
+          }
+        ]
+      },
+      "streamSettings": {
+        "sockopt": {
+          "dialerProxy": "udp-noise"
+        }
+      }
+    },
+    {
+      "tag": "direct",
+      "protocol": "freedom",
+      "settings": {}
+    },
+    {
+      "tag": "udp-noise",
+      "protocol": "freedom",
+      "settings": {
+        "noises": [
+          { "type": "rand", "packet": "50-100", "delay": "1-5" },
+          { "type": "rand", "packet": "50-100", "delay": "1-5" },
+          { "type": "rand", "packet": "50-100", "delay": "1-5" },
+          { "type": "rand", "packet": "50-100", "delay": "1-5" },
+          { "type": "rand", "packet": "50-100", "delay": "1-5" }
+        ]
+      }
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "ip": [
+          "geoip:private",
+          "geoip:ir"
+        ]
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "domain": [
+          "geosite:ir"
+        ]
+      },
+      {
+        "type": "field",
+        "inboundTag": [
+          "tun-in",
+          "socks-in",
+          "http-in"
+        ],
+        "outboundTag": "warp-out"
+      }
+    ]
+  }
+}
