@@ -47,36 +47,69 @@ This handbook provides battle-tested architectures to bypass aggressive Deep Pac
 
 ### 🏗️ Gateway Deployment Methodologies
 
-Choose the method that fits your hardware setup:
+Choose the method that best matches your workflow and hardware:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│  Method 1: Windows Native TUN + ICS (Fastest, zero-VM setup)           │
+│  Method 1: Windows Server VM Gateway (GUI-driven via RRAS & NAT)       │
 │  Method 2: Standalone Ubuntu Home Server (Dedicated physical appliance)│
-│  Method 3: VMware + Ubuntu Minimal + Loopback (Single-laptop isolated) │
+│  Method 3: VMware + Ubuntu Minimal + Loopback (Ultra-lightweight CLI)  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-#### 🥇 Method 1: Windows Native TUN + Mobile Hotspot / ICS (Fastest & Simplest)
-If you only have one Windows laptop and want to instantly share unblocked internet with your phone, smart TV, or console without running any virtual machines:
+#### 🥇 Method 1: Windows Server in VMware as a Gateway (GUI-Driven via RRAS)
+If you prefer a familiar graphical interface (GUI) over Linux terminal commands and have enough RAM (requires 2–3 GB for the VM):
 
-1. Download [`wintun.dll`](https://www.wintun.net) and place it alongside `xray.exe`.
-2. Run `xray-windows-tun.json` in PowerShell as Administrator:
+```text
+[ Windows Host Laptop ] ──── (Microsoft Loopback: 10.10.10.1) ────┐
+                                                                   ▼
+[ Physical Wi-Fi Router ] ◄── (Bridged Adapter) ── [ Windows Server VM (10.10.10.2) ]
+                                                            │
+                                                   [ Xray TUN (CloudflareMesh) ]
+                                                            │
+                                                   [ RRAS IPv4 NAT Service ]
+                                                            │
+                                                            ▼
+                                                   [ Cloudflare Edge ]
+```
+
+##### Step 1: Virtual Hardware Setup
+In VMware Workstation, create a Windows Server VM (2019, 2022, or 2025 Desktop Experience) with:
+* **2 CPU Cores**, **2048 to 3072 MB RAM**, and a **35 GB Thin Provisioned disk**.
+* **Network Adapter 1:** Bridged to physical Wi-Fi (for raw internet access).
+* **Network Adapter 2:** Bridged to `Microsoft KM-TEST Loopback Adapter` (internal link to Host).
+
+##### Step 2: Running Xray on Windows Server
+1. Download `xray.exe`, [`wintun.dll`](https://www.wintun.net), and `xray-windows-tun.json`.
+2. Run PowerShell as Administrator:
    ```powershell
    .\xray.exe run -c xray-windows-tun.json
    ```
-3. Enable **Mobile Hotspot** in Windows Settings.
-4. Open **Control Panel > Network Connections**.
-5. Right-click the newly created adapter (`CloudflareMesh`) > **Properties** > **Sharing** tab:
-   * Check *"Allow other network users to connect through this computer's Internet connection"*.
-   * Select your Mobile Hotspot adapter (usually named *Local Area Connection\* X*).
-6. Connect your phone or TV to the Wi-Fi hotspot. All devices will receive unblocked internet automatically!
+   The virtual network interface `CloudflareMesh` will be created with unblocked internet.
+
+##### Step 3: Enabling the RRAS / NAT Role (GUI)
+1. Open **Server Manager** > click **Add roles and features**.
+2. Select **Remote Access** > under Role Services, check **Routing** (DirectAccess and VPN will auto-select).
+3. Complete the installation wizard.
+4. Open the **Routing and Remote Access** console (`rrasmgmt.msc`).
+5. Right-click your server name > **Configure and Enable Routing and Remote Access**.
+6. Choose **Custom configuration** > check **NAT** and **LAN routing** > Finish > Start service.
+7. In the left panel, expand **IPv4 > NAT**:
+   * Right-click **NAT** > **New Interface...** > select **`CloudflareMesh`**.
+   * Choose *"Public interface connected to the Internet"* and check *"Enable NAT on this interface"* > OK.
+   * Right-click **NAT** again > **New Interface...** > select your internal interface (connected to Loopback).
+   * Choose *"Private interface connected to private network"* > OK.
+
+##### Step 4: Configure Windows Host
+On your main Windows laptop:
+* On the **Microsoft Loopback Adapter**: Set IPv4 Default Gateway to the Windows Server VM's IP (`10.10.10.2`).
+* On the **Physical Wi-Fi Adapter**: Assign a static IP and **leave Default Gateway BLANK**.
 
 ---
 
-#### 🥈 Method 2: Standalone Ubuntu Home Server (Dedicated Gateway)
+#### 🥈 Method 2: Standalone Ubuntu Home Server (Dedicated Hardware Appliance)
 Ideal if you have an old laptop, mini-PC, or Raspberry Pi running Ubuntu connected to your home router:
 
 ```text
@@ -95,12 +128,12 @@ Ideal if you have an old laptop, mini-PC, or Raspberry Pi running Ubuntu connect
    sudo sysctl -w net.ipv4.ip_forward=1
    sudo iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE
    ```
-3. On your other devices, simply set their **Default Gateway** to the Ubuntu IP (`192.168.1.100`).
+3. On other devices, set their **Default Gateway** to the Ubuntu IP (`192.168.1.100`).
 
 ---
 
-#### 🥉 Method 3: Single-Laptop Setup via VMware & Loopback Adapter
-Designed to run an isolated gateway inside a single laptop, bypassing Wi-Fi 802.11 3-address frame bridging issues:
+#### 🥉 Method 3: Single-Laptop Setup via VMware & Ubuntu Minimal (Ultra-Light CLI)
+Designed to run an isolated gateway inside a single laptop with virtually zero CPU footprint and under 200 MB of RAM usage:
 
 ```text
 [ Mobile / Other Devices ]
@@ -118,7 +151,7 @@ Designed to run an isolated gateway inside a single laptop, bypassing Wi-Fi 802.
 
 ---
 
-### 🔧 Step-by-Step Implementation for Method 3 & Ubuntu
+### 🔧 Step-by-Step Implementation for Method 3
 
 #### 1. Installing the Microsoft Loopback Adapter on Windows
 1. Press `Win + R`, type **`hdwwiz.exe`**, and press Enter.
@@ -134,7 +167,7 @@ Designed to run an isolated gateway inside a single laptop, bypassing Wi-Fi 802.
 5. Assign your Ubuntu VM's second network adapter to this custom `VMnet2`.
 
 #### 3. Installing Ubuntu Server 24.04 LTS (Minimal)
-* Allocate **1 CPU core**, **1024 MB RAM**, and a **15 GB Thin Provisioned disk**.
+* Hardware specs: **1 CPU core**, **1024 MB RAM**, and a **15 GB Thin Provisioned disk**.
 * In the installer, select **Ubuntu Server (Minimised)**.
 * Install guest utilities and required packages:
   ```bash
@@ -183,12 +216,14 @@ sudo netplan apply
 * **Physical Wi-Fi Adapter:**
   * Static IP on home network (e.g., `192.168.1.50`).
   * **Leave Default Gateway BLANK!** *(Forces all traffic through Loopback).*
+* **Internet Connection Sharing (ICS) to Other Devices:**
+  * In `ncpa.cpl`, right-click Microsoft Loopback Adapter > Properties > Sharing tab > check *"Allow other network users..."* and select your Wi-Fi or Hotspot adapter to broadcast clean internet on `192.168.137.x`.
 * **Run VM Headless (Background):**
   In VMware, select **VM > Power > Run in Background** (or close the window and choose *"Run in background"*).
 
 ---
 
-### 🚀 Running the Ubuntu Gateway
+### 🚀 Running the Ubuntu Gateway (Method 3)
 
 #### Option A: Manual Session Run (Temporary Testing)
 Execute these commands in your active terminal session (resets on reboot):
@@ -247,7 +282,7 @@ sudo systemctl enable --now xray
 ### 🛠️ Optional Features & Customizations
 
 #### 1. Turn Ubuntu or Windows into a Local DNS Server (Port 53)
-To have Ubuntu or Windows act as a local DNS server for your LAN devices:
+To have Ubuntu or Windows act as a local DNS resolver (like `1.1.1.1`) for all devices on your LAN:
 Add a `dokodemo-door` inbound to `"inbounds"` in your `config.json`:
 ```json
 {
@@ -262,7 +297,7 @@ Add a `dokodemo-door` inbound to `"inbounds"` in your `config.json`:
   }
 }
 ```
-Add `"dns-in"` to your fallback routing rule targeting `"warp-out"`. Devices can now point their DNS to your machine's IP!
+Add `"dns-in"` to your fallback routing rule targeting `"warp-out"`. Devices can now set their DNS to the Gateway machine's IP!
 
 #### 2. Removing Iran Bypass Rules (Route 100% Traffic through WARP)
 To force all traffic through the encrypted tunnel (e.g., when outside Iran or requiring full anonymity), simply **delete** these two rules from the `"routing"` section:
@@ -295,7 +330,7 @@ All production configurations reside in the [`configs/`](configs/) folder:
 | Configuration File | Target Platform | Description |
 | :--- | :--- | :--- |
 | [`xray-linux.json`](configs/xray-linux.json) | Ubuntu Server | Gateway router mode, `tun0`, LAN SOCKS/HTTP, Dual-Stack IPv6 & Smart Iran routing. |
-| [`xray-windows-tun.json`](configs/xray-windows-tun.json) | Windows 10/11 | Standalone full-system tunnel via `wintun.dll` with NCSI-compatible DNS routing. |
+| [`xray-windows-tun.json`](configs/xray-windows-tun.json) | Windows 10/11 & Server | Standalone full-system tunnel via `wintun.dll` with NCSI-compatible DNS routing. |
 | [`xray-windows-proxy.json`](configs/xray-windows-proxy.json) | Windows 10/11 | Lightweight local SOCKS5 (`2080`) / HTTP (`2081`) proxy without admin rights. |
 | [`xray-android.json`](configs/xray-android.json) | Android | Optimized for v2rayNG / NekoBox using Android's native VpnService on port `10808`. |
 | [`singbox-1.15.json`](configs/singbox-1.15.json) | Multi-platform | Modern Sing-box 1.15+ schema using root `endpoints` and rule-actions. |
@@ -315,7 +350,7 @@ All production configurations reside in the [`configs/`](configs/) folder:
 ### 🧠 مبانی فنی و کشفیات کلیدی
 
 1. **علت مسدود شدن وایرگارد استاندارد (DPI):**  
-   فایروال‌های مخابرات بسته اولیه هندشیک وایرگارد (بایت ثابت `0x01` و طول ۱۴۸ بایت) را شناسایی کرده و ارتباط را قطع می‌کنند (`connect timeout`).
+   فایروال‌های مخابرات بسته اولیه هندشیک وایرگارد (بایت ثابت `0x01` و طول ۱۴۸ بایت) را بلافاصله شناسایی کرده و ارتباط را قطع می‌کنند (`connect timeout`).
 2. **چرا نویز (Noise) پیروز شد اما فرگمنت (Fragment) شکست خورد؟**  
    * **فرگمنت:** مخصوص ترافیک TCP/TLS وب است تا SNI را تکه‌تکه کند. ترافیک وایرگارد بر بستر **UDP** است و بسته‌های وب درون کپسول رمزنگاری‌شده آن قرار دارند؛ فیلترچی اصلاً محتوای وب را نمی‌بیند، بنابراین فرگمنت روی وایرگارد بی‌اثر است.
    * **نویز:** قبل از بسته اصلی هندشیک، چند بسته تصادفی و بی‌معنی به عنوان طعمه پرتاب می‌کند. فایروال با دیدن این بسته‌ها وضعیت بازرسی جریان را گم کرده و ترافیک را عبور می‌دهد.
@@ -328,32 +363,59 @@ All production configurations reside in the [`configs/`](configs/) folder:
 
 ### 🏗️ روش‌های پیاده‌سازی گیت‌وی (Gateway)
 
-بسته به شرایط سخت‌افزاری خود یکی از ۳ روش زیر را انتخاب کنید:
+بسته به شرایط و سلیقه خود یکی از ۳ روش زیر را انتخاب کنید:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│  روش ۱: ویندوز TUN + قابلیت Mobile Hotspot (سریع‌ترین، بدون نیاز به VM)│
+│  روش ۱: ویندوز سرور در VMware به عنوان گیت‌وی (محیط کاملاً گرافیکی RRAS)│
 │  روش ۲: سرور اوبونتو فیزیکی مستقل در شبکه خانگی (دستگاه اختصاصی LAN)   │
-│  روش ۳: ترکیب VMware + اوبونتو سرور + کارت Loopback (تک‌لپ‌تاپ ایزوله)  │
+│  روش ۳: ترکیب VMware + اوبونتو سرور مینیمال + کارت Loopback (بسیار سبک) │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-#### 🥇 روش اول: کارت شبکه TUN ویندوز + هات‌اسپات (سریع‌ترین و ساده‌ترین حالت)
-اگر فقط یک لپ‌تاپ ویندوزی دارید و هدف اصلی شما رساندن اینترنت آزاد به گوشی، تلویزیون و سایر دستگاه‌هاست:
+#### 🥇 روش اول: ویندوز سرور در VMware به عنوان گیت‌وی (محیط کاملاً گرافیکی با RRAS)
+اگر کار با پنجره‌ها و منوهای گرافیکی ویندوز (GUI) را به تایپ دستورات ترمینال لینوکس ترجیح می‌دهید و رم کافی دارید (نیازمند اختصاص ۲ تا ۳ گیگابایت رم به ماشین مجازی):
 
-1. فایل [`wintun.dll`](https://www.wintun.net) را دانلود کرده و کنار `xray.exe` قرار دهید.
-2. کانفیگ `xray-windows-tun.json` را در ترمینال Administrator اجرا کنید:
-   ```powershell
-   .\xray.exe run -c xray-windows-tun.json
-   ```
-3. گزینه **Mobile Hotspot** را در تنظیمات ویندوز روشن کنید.
-4. به **Control Panel > Network Connections** بروید.
-5. روی کارت شبکه ایجادشده (`CloudflareMesh`) کلیک‌راست کرده > **Properties** > تب **Sharing**:
-   * تیک اشتراک‌گذاری اینترنت را فعال کنید.
-   * کارت شبکه مربوط به Mobile Hotspot (معمولاً *Local Area Connection\* X*) را انتخاب کنید.
-6. گوشی یا دستگاه‌های دیگر را به هات‌اسپات وصل کنید؛ همه دستگاه‌ها فوراً اینترنت بدون فیلتر دریافت خواهند کرد!
+```text
+[ ویندوز اصلی لپ‌تاپ ] ──── (کارت Loopback: 10.10.10.1) ────┐
+                                                             ▼
+[ مودم خانگی اینترنت ] ◄── (کارت Bridged) ── [ ویندوز سرور در VMware (10.10.10.2) ]
+                                                            │
+                                                   [ Xray TUN (CloudflareMesh) ]
+                                                            │
+                                                   [ سرویس NAT در RRAS ]
+                                                            │
+                                                            ▼
+                                                   [ ابر کلودفلر ]
+```
+
+##### مرحله ۱: تنظیم سخت‌افزار ماشین مجازی
+در نرم‌افزار VMware، یک ماشین مجازی ویندوز سرور (۲۰۱۹، ۲۰۲۲ یا ۲۰۲۵ با قابلیت Desktop Experience) بسازید:
+* **۲ هسته پردازنده**، **۲ تا ۳ گیگابایت رم** و **دیسک ۳۵ گیگابایتی Thin Provisioned**.
+* **کارت شبکه ۱:** روی **Bridged** به کارت وای‌فای فیزیکی (برای دریافت اینترنت خام مودم).
+* **کارت شبکه ۲:** روی **Bridged** به کارت `Microsoft KM-TEST Loopback Adapter` (لینک داخلی به ویندوز اصلی).
+
+##### مرحله ۲: اجرای Xray در ویندوز سرور
+1. فایل‌های `xray.exe`، [`wintun.dll`](https://www.wintun.net) و کانفیگ `xray-windows-tun.json` را داخل ماشین مجازی قرار دهید.
+2. با دسترسی Administrator اجرا کنید تا کارت شبکه `CloudflareMesh` ساخته شده و اینترنت ویندوز سرور آزاد شود.
+
+##### مرحله ۳: فعال‌سازی روتینگ و NAT در ویندوز سرور (از طریق GUI)
+1. برنامه **Server Manager** را باز کرده و روی **Add roles and features** کلیک کنید.
+2. رول **Remote Access** را انتخاب کنید و در بخش Role Services، تیک **Routing** را بزنید و نصب کنید.
+3. کنسول **Routing and Remote Access** را باز کنید (`rrasmgmt.msc`).
+4. روی نام سرور کلیک‌راست کرده > **Configure and Enable Routing and Remote Access**.
+5. گزینه **Custom configuration** را انتخاب کنید > تیک‌های **NAT** و **LAN routing** را بزنید و سرویس را استارت کنید.
+6. در پنل سمت چپ، زیرشاخه **IPv4 > NAT** را باز کنید:
+   * روی **NAT** کلیک‌راست کنید > **New Interface...** > کارت شبکه **`CloudflareMesh`** را انتخاب کنید.
+   * گزینه *"Public interface connected to the Internet"* را انتخاب کرده و تیک *"Enable NAT on this interface"* را بزنید > OK.
+   * مجدداً روی **NAT** کلیک‌راست کنید > **New Interface...** > کارت شبکه داخلی (متصل به Loopback) را انتخاب کنید.
+   * گزینه *"Private interface connected to private network"* را انتخاب کنید > OK.
+
+##### مرحله ۴: تنظیم ویندوز اصلی لپ‌تاپ
+* روی کارت **Microsoft Loopback**: در تنظیمات IPv4، مقدار Default Gateway را آی‌پی ویندوز سرور (`10.10.10.2`) بگذارید.
+* روی کارت **Wi-Fi فیزیکی**: آی‌پی دستی بگذارید و فیلد **Default Gateway را کاملاً خالی بگذارید**.
 
 ---
 
@@ -380,8 +442,8 @@ All production configurations reside in the [`configs/`](configs/) folder:
 
 ---
 
-#### 🥉 روش سوم: پیاده‌سازی روی یک تک‌لپ‌تاپ با VMware و کارت Loopback
-برای راه‌اندازی یک گیت‌وی ایزوله درون یک لپ‌تاپ بدون باگ‌های فریم ۳ آدرسی وای‌فای:
+#### 🥉 روش سوم: پیاده‌سازی روی یک تک‌لپ‌تاپ با VMware و اوبونتو مینیمال (بسیار سبک)
+برای راه‌اندازی گیت‌وی با مصرف رم زیر ۲۰۰ مگابایت و بدون فشار روی پردازنده لپ‌تاپ:
 
 ```text
 [ گوشی و سایر دستگاه‌ها ]
@@ -389,7 +451,7 @@ All production configurations reside in the [`configs/`](configs/) folder:
          ▼
 [ لپ‌تاپ ویندوزی ] ──── (کارت Loopback: 10.10.10.1) ────┐
                                                          ▼
-[ مودم خانگی اینترنت ] ◄── (Bridge Wi-Fi) ── [ اوبونتو سرور (10.10.10.2) ]
+[ مودم خانگی اینترنت ] ◄── (کارت Bridged) ── [ اوبونتو سرور (10.10.10.2) ]
                                                          │
                                                [ Xray با نویز روی tun0 ]
                                                          │
@@ -399,7 +461,7 @@ All production configurations reside in the [`configs/`](configs/) folder:
 
 ---
 
-### 🔧 راهنمای گام‌به‌گام پیاده‌سازی روش سوم و اوبونتو
+### 🔧 راهنمای پیاده‌سازی گام‌به‌گام روش سوم
 
 #### ۱. نصب کارت شبکه Microsoft Loopback در ویندوز
 1. کلیدهای `Win + R` را بزنید، تایپ کنید **`hdwwiz.exe`** و اینتر کنید.
@@ -464,12 +526,14 @@ sudo netplan apply
 * **کارت شبکه Wi-Fi فیزیکی:**
   * آی‌پی دستی ست کنید (مثلاً `192.168.1.50`).
   * **Default Gateway: کاملاً خالی بگذارید!** *(کلید جلوگیری از نشت و لوپ).*
+* **اشتراک‌گذاری اینترنت (ICS) با گوشی:**
+  * در `ncpa.cpl`، روی کارت Loopback کلیک‌راست کرده > Properties > تب Sharing > تیک اشتراک‌گذاری را بزنید و کارت هات‌اسپات را انتخاب کنید تا دستگاه‌ها روی رنج `192.168.137.x` اینترنت بگیرند.
 * **اجرای ماشین مجازی در پس‌زمینه (Headless):**
   هنگام بستن پنجره VMware، گزینه **Run in background** را بزنید تا هیچ پنجره گرافیکی باز نماند و رم لپ‌تاپ هدر نرود.
 
 ---
 
-### 🚀 نحوه اجرای گیت‌وی در اوبونتو
+### 🚀 نحوه اجرای گیت‌وی در اوبونتو (روش سوم)
 
 #### حالت اول: اجرای موقت دستی (فقط برای تست سشن فعلی)
 این دستورات با ریستارت شدن لینوکس ریست می‌شوند:
@@ -576,7 +640,7 @@ New-NetFirewallRule -DisplayName "Allow RDP Mesh" -Direction Inbound -LocalPort 
 | نام فایل | سیستم‌عامل هدف | توضیحات معماری |
 | :--- | :--- | :--- |
 | [`xray-linux.json`](configs/xray-linux.json) | سرور اوبونتو | حالت روتر گیت‌وی، اینترفیس `tun0`، پروکسی شبکه روی پورت ۲۰۸۰، روتینگ ایران و IPv6. |
-| [`xray-windows-tun.json`](configs/xray-windows-tun.json) | ویندوز ۱۰ و ۱۱ | تونل کامل سیستم با `wintun.dll` و مدیریت خودکار دی‌ان‌اس ویندوز (NCSI). |
+| [`xray-windows-tun.json`](configs/xray-windows-tun.json) | ویندوز ۱۰ و ۱۱ و سرور | تونل کامل سیستم با `wintun.dll` و مدیریت خودکار دی‌ان‌اس ویندوز (NCSI). |
 | [`xray-windows-proxy.json`](configs/xray-windows-proxy.json) | ویندوز ۱۰ و ۱۱ | حالت پروکسی سبک SOCKS5 (`2080`) و HTTP (`2081`) بدون نیاز به دسترسی ادمین. |
 | [`xray-android.json`](configs/xray-android.json) | اندروید | مخصوص v2rayNG و NekoBox با تکیه بر VpnService بومی سیستم‌عامل روی پورت ۱۰۸۰۸. |
 | [`singbox-1.15.json`](configs/singbox-1.15.json) | چندسکویی | ساختار مدرن Sing-box 1.15 با ریشه `endpoints` و حذف فیلدهای منسوخ‌شده. |
