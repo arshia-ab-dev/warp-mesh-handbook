@@ -80,7 +80,7 @@
     {
       "tag": "socks-in",
       "port": 1080,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
@@ -95,7 +95,7 @@
     {
       "tag": "http-in",
       "port": 1081,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "http",
       "settings": {
         "auth": "noauth"
@@ -109,7 +109,7 @@
     {
       "tag": "socks1-in",
       "port": 1082,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
@@ -124,7 +124,7 @@
     {
       "tag": "http1-in",
       "port": 1083,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "http",
       "settings": {
         "auth": "noauth"
@@ -138,7 +138,7 @@
     {
       "tag": "socks2-in",
       "port": 1084,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
@@ -153,7 +153,7 @@
     {
       "tag": "http2-in",
       "port": 1085,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "http",
       "settings": {
         "auth": "noauth"
