@@ -12,7 +12,7 @@
   "inbounds": [
     {
       "tag": "socks-in",
-      "port": 2080,
+      "port": 1080,
       "listen": "127.0.0.1",
       "protocol": "socks",
       "settings": {
@@ -22,7 +22,7 @@
     },
     {
       "tag": "http-in",
-      "port": 2081,
+      "port": 1081,
       "listen": "127.0.0.1",
       "protocol": "http",
       "settings": {
