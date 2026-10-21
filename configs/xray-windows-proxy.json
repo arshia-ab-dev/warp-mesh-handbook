@@ -13,7 +13,7 @@
     {
       "tag": "socks-in",
       "port": 1080,
-      "listen": "127.0.0.1",
+      "listen": "0.0.0.0",
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
@@ -23,7 +23,7 @@
     {
       "tag": "http-in",
       "port": 1081,
-      "listen": "127.0.0.1",
+      "listen": "0.0.0.0",
       "protocol": "http",
       "settings": {
         "auth": "noauth"
