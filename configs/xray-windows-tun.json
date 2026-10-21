@@ -32,6 +32,25 @@
         ],
         "autoOutboundsInterface": "auto"
       }
+    },
+    {
+      "tag": "socks-in",
+      "port": 1080,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      }
+    },
+    {
+      "tag": "http-in",
+      "port": 1081,
+      "listen": "127.0.0.1",
+      "protocol": "http",
+      "settings": {
+        "auth": "noauth"
+      }
     }
   ],
   "outbounds": [
@@ -101,7 +120,9 @@
       {
         "type": "field",
         "inboundTag": [
-          "tun-in"
+          "tun-in",
+          "socks-in",
+          "http-in"
         ],
         "outboundTag": "warp-out"
       }
