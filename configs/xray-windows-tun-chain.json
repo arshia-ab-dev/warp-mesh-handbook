@@ -82,23 +82,12 @@
       }
     },
     {
-      "tag": "dns-in-v4",
+      "tag": "dns-in",
       "port": 53,
-      "listen": "127.0.0.1",
+      "listen": "::",
       "protocol": "dokodemo-door",
       "settings": {
-        "address": "127.0.0.1",
-        "port": 53,
-        "network": "tcp,udp"
-      }
-    },
-    {
-      "tag": "dns-in-v6",
-      "port": 53,
-      "listen": "::1",
-      "protocol": "dokodemo-door",
-      "settings": {
-        "address": "::1",
+        "address": "1.1.1.1",
         "port": 53,
         "network": "tcp,udp"
       }
@@ -306,7 +295,7 @@
       },
       {
         "type": "field",
-        "inboundTag": ["dns-in-v4", "dns-in-v6"],
+        "inboundTag": ["dns-in"],
         "outboundTag": "dns-out"
       },
       {
@@ -331,13 +320,18 @@
       },
       {
         "type": "field",
-        "inboundTag": ["socks1-in", "http1-in"],
-        "outboundTag": "chain-socks-1"
+        "inboundTag": ["socks-in", "http-in"],
+        "outboundTag": "warp-out"
       },
       {
         "type": "field",
         "inboundTag": ["socks2-in", "http2-in"],
         "outboundTag": "chain-socks-2"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["tun-in", "socks1-in", "http1-in"],
+        "outboundTag": "chain-socks-1"
       },
       {
         "type": "field",
