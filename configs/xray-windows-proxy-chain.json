@@ -3,57 +3,166 @@
     "loglevel": "warning"
   },
   "dns": {
+    "hosts": {
+      "geosite:category-ads-all": [
+        "0.0.0.0",
+        "::"
+      ]
+    },
     "servers": [
-      "https://1.1.1.1/dns-query",
-      "https://[2606:4700:4700::1111]/dns-query"
+      {
+        "address": "217.218.127.127",
+        "port": 53,
+        "network": "udp",
+        "domains": [
+          "geosite:ir",
+          "domain:ir"
+        ],
+        "expectIPs": [
+          "geoip:ir"
+        ],
+        "skipFallback": true
+      },
+      {
+        "address": "192.168.1.1",
+        "port": 53,
+        "network": "udp",
+        "domains": [
+          "geosite:private",
+          "domain:local",
+          "domain:lan",
+          "domain:home.arpa"
+        ],
+        "expectIPs": [
+          "geoip:private"
+        ],
+        "skipFallback": true
+      },
+      "https://cloudflare-dns.com/dns-query",
+      "2606:4700:4700::1111",
+      "2606:4700:4700::1001",
+      "1.1.1.1",
+      "1.0.0.1"
     ],
-    "queryStrategy": "UseIP"
+    "queryStrategy": "UseIPv6v4"
   },
   "inbounds": [
     {
-      "tag": "warp-socks",
+      "tag": "socks-in",
       "port": 1080,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "socks",
-      "settings": { "auth": "noauth", "udp": true }
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": true
+      }
     },
     {
-      "tag": "warp-http",
+      "tag": "http-in",
       "port": 1081,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "http",
-      "settings": { "auth": "noauth" }
+      "settings": {
+        "auth": "noauth"
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": true
+      }
     },
     {
       "tag": "socks1-in",
       "port": 1082,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "socks",
-      "settings": { "auth": "noauth", "udp": true }
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": true
+      }
     },
     {
       "tag": "http1-in",
       "port": 1083,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "http",
-      "settings": { "auth": "noauth" }
+      "settings": {
+        "auth": "noauth"
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": true
+      }
     },
     {
       "tag": "socks2-in",
       "port": 1084,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "socks",
-      "settings": { "auth": "noauth", "udp": true }
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": true
+      }
     },
     {
       "tag": "http2-in",
       "port": 1085,
-      "listen": "0.0.0.0",
+      "listen": "::",
       "protocol": "http",
-      "settings": { "auth": "noauth" }
+      "settings": {
+        "auth": "noauth"
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": true
+      }
     }
   ],
   "outbounds": [
+    {
+      "tag": "warp-out",
+      "protocol": "wireguard",
+      "settings": {
+        "secretKey": "YOUR_PRIVATE_KEY_HERE",
+        "address": [
+          "YOUR_VIRTUAL_IPV6_HERE/128",
+          "YOUR_VIRTUAL_IPV4_HERE/32"
+        ],
+        "reserved": [0, 0, 0],
+        "mtu": 1280,
+        "noKernelTun": true,
+        "peers": [
+          {
+            "endpoint": "CLEAN_WARP_ENDPOINT_IP:PORT",
+            "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+            "keepAlive": 5
+          }
+        ]
+      },
+      "streamSettings": {
+        "sockopt": {
+          "dialerProxy": "udp-noise",
+          "domainStrategy": "UseIPv6v4"
+        }
+      }
+    },
     {
       "tag": "chain-socks-1",
       "protocol": "socks",
@@ -68,7 +177,8 @@
       },
       "streamSettings": {
         "sockopt": {
-          "dialerProxy": "warp-out"
+          "dialerProxy": "warp-out",
+          "domainStrategy": "UseIPv6v4"
         }
       }
     },
@@ -86,40 +196,31 @@
       },
       "streamSettings": {
         "sockopt": {
-          "dialerProxy": "warp-out"
-        }
-      }
-    },
-    {
-      "tag": "warp-out",
-      "protocol": "wireguard",
-      "settings": {
-        "secretKey": "YOUR_PRIVATE_KEY_HERE",
-        "address": [
-          "YOUR_VIRTUAL_IPV4_HERE/32",
-          "YOUR_VIRTUAL_IPV6_HERE/128"
-        ],
-        "reserved": [0, 0, 0],
-        "mtu": 1280,
-        "noKernelTun": true,
-        "peers": [
-          {
-            "endpoint": "CLEAN_WARP_ENDPOINT_IP:PORT",
-            "publicKey": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
-            "keepAlive": 5
-          }
-        ]
-      },
-      "streamSettings": {
-        "sockopt": {
-          "dialerProxy": "udp-noise"
+          "dialerProxy": "warp-out",
+          "domainStrategy": "UseIPv6v4"
         }
       }
     },
     {
       "tag": "direct",
       "protocol": "freedom",
-      "settings": {}
+      "settings": {
+        "domainStrategy": "UseIPv6v4"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "domainStrategy": "UseIPv6v4"
+        }
+      }
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole",
+      "settings": {
+        "response": {
+          "type": "none"
+        }
+      }
     },
     {
       "tag": "udp-noise",
@@ -140,6 +241,22 @@
     "rules": [
       {
         "type": "field",
+        "outboundTag": "block",
+        "domain": [
+          "geosite:category-ads-all"
+        ]
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "ip": [
+          "217.218.127.127",
+          "192.168.1.1"
+        ],
+        "port": "53"
+      },
+      {
+        "type": "field",
         "outboundTag": "direct",
         "ip": [
           "geoip:private",
@@ -150,13 +267,13 @@
         "type": "field",
         "outboundTag": "direct",
         "domain": [
-          "geosite:ir"
+          "geosite:ir",
+          "domain:ir",
+          "geosite:private",
+          "domain:local",
+          "domain:lan",
+          "domain:home.arpa"
         ]
-      },
-      {
-        "type": "field",
-        "inboundTag": ["warp-socks", "warp-http"],
-        "outboundTag": "warp-out"
       },
       {
         "type": "field",
@@ -167,6 +284,11 @@
         "type": "field",
         "inboundTag": ["socks2-in", "http2-in"],
         "outboundTag": "chain-socks-2"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["socks-in", "http-in"],
+        "outboundTag": "warp-out"
       }
     ]
   }
