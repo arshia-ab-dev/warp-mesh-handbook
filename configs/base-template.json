@@ -82,12 +82,23 @@
       }
     },
     {
-      "tag": "dns-in",
+      "tag": "dns-in-v4",
       "port": 53,
-      "listen": "::",
+      "listen": "127.0.0.1",
       "protocol": "dokodemo-door",
       "settings": {
-        "address": "1.1.1.1",
+        "address": "127.0.0.1",
+        "port": 53,
+        "network": "tcp,udp"
+      }
+    },
+    {
+      "tag": "dns-in-v6",
+      "port": 53,
+      "listen": "::1",
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "::1",
         "port": 53,
         "network": "tcp,udp"
       }
@@ -182,10 +193,6 @@
   ],
   "outbounds": [
     {
-      "tag": "dns-out",
-      "protocol": "dns"
-    },
-    {
       "tag": "warp-out",
       "protocol": "wireguard",
       "settings": {
@@ -251,11 +258,13 @@
       }
     },
     {
+      "tag": "dns-out",
+      "protocol": "dns"
+    },
+    {
       "tag": "direct",
       "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIPv6v4"
-      },
+      "settings": {},
       "streamSettings": {
         "sockopt": {
           "domainStrategy": "UseIPv6v4"
@@ -297,17 +306,8 @@
       },
       {
         "type": "field",
-        "inboundTag": ["dns-in"],
+        "inboundTag": ["dns-in-v4", "dns-in-v6"],
         "outboundTag": "dns-out"
-      },
-      {
-        "type": "field",
-        "outboundTag": "direct",
-        "ip": [
-          "217.218.127.127",
-          "192.168.1.1"
-        ],
-        "port": "53"
       },
       {
         "type": "field",
@@ -341,8 +341,8 @@
       },
       {
         "type": "field",
-        "inboundTag": ["tun-in", "socks-in", "http-in"],
-        "outboundTag": "warp-out"
+        "outboundTag": "warp-out",
+        "network": "tcp,udp"
       }
     ]
   }
