@@ -12,14 +12,21 @@
   "inbounds": [
     {
       "tag": "socks-in",
-      "port": 10808,
+      "port": 1080,
       "listen": "0.0.0.0",
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
         "udp": true
       }
-    }
+    },
+    {
+      "tag": "http-in",
+      "port": 1081,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": { "auth": "noauth" }
+    },
   ],
   "outbounds": [
     {
@@ -88,7 +95,8 @@
       {
         "type": "field",
         "inboundTag": [
-          "socks-in"
+          "socks-in",
+          "http-in"
         ],
         "outboundTag": "warp-out"
       }
