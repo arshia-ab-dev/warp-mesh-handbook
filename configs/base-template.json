@@ -60,21 +60,30 @@
           "YOUR_VIRTUAL_IPV4_HERE/32"
         ],
         "dns": [
-          "2606:4700:4700::1111",
-          "1.1.1.1"
+          "::1",
+          "127.0.0.1"
         ],
         "autoSystemRoutingTable": [
           "::/0",
           "0.0.0.0/0"
         ],
-        "autoOutboundsInterface": "auto",
-        "strictRoute": true,
-        "routeOnly": false
+        "autoOutboundsInterface": "auto"
       },
       "sniffing": {
         "enabled": true,
         "destOverride": ["http", "tls"],
         "routeOnly": true
+      }
+    },
+    {
+      "tag": "dns-in",
+      "port": 53,
+      "listen": "::",
+      "protocol": "dokodemo-door",
+      "settings": {
+        "address": "1.1.1.1",
+        "port": 53,
+        "network": "tcp,udp"
       }
     },
     {
@@ -166,6 +175,10 @@
     }
   ],
   "outbounds": [
+    {
+      "tag": "dns-out",
+      "protocol": "dns"
+    },
     {
       "tag": "warp-out",
       "protocol": "wireguard",
@@ -275,6 +288,11 @@
         "domain": [
           "geosite:category-ads-all"
         ]
+      },
+      {
+        "type": "field",
+        "inboundTag": ["dns-in"],
+        "outboundTag": "dns-out"
       },
       {
         "type": "field",
