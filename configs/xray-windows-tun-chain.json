@@ -41,6 +41,13 @@
       "settings": { "auth": "noauth", "udp": true }
     },
     {
+      "tag": "warp-http",
+      "port": 1081,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": { "auth": "noauth" }
+    },
+    {
       "tag": "socks1-in",
       "port": 1082,
       "listen": "0.0.0.0",
@@ -48,11 +55,25 @@
       "settings": { "auth": "noauth", "udp": true }
     },
     {
+      "tag": "http1-in",
+      "port": 1083,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": { "auth": "noauth" }
+    },
+    {
       "tag": "socks2-in",
       "port": 1084,
       "listen": "0.0.0.0",
       "protocol": "socks",
       "settings": { "auth": "noauth", "udp": true }
+    },
+    {
+      "tag": "http2-in",
+      "port": 1085,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": { "auth": "noauth" }
     }
   ],
   "outbounds": [
@@ -157,17 +178,17 @@
       },
       {
         "type": "field",
-        "inboundTag": ["warp-socks"],
+        "inboundTag": ["warp-socks", "warp-http"],
         "outboundTag": "warp-out"
       },
       {
         "type": "field",
-        "inboundTag": ["socks2-in"],
+        "inboundTag": ["socks2-in", "http2-in"],
         "outboundTag": "chain-socks-2"
       },
       {
         "type": "field",
-        "inboundTag": ["tun-in", "socks1-in"],
+        "inboundTag": ["tun-in", "socks1-in", "http1-in"],
         "outboundTag": "chain-socks-1"
       }
     ]
