@@ -34,7 +34,7 @@
     },
     {
       "tag": "socks-in",
-      "port": 2080,
+      "port": 1080,
       "listen": "0.0.0.0",
       "protocol": "socks",
       "settings": {
@@ -44,7 +44,7 @@
     },
     {
       "tag": "http-in",
-      "port": 2081,
+      "port": 1081,
       "listen": "0.0.0.0",
       "protocol": "http",
       "settings": {
