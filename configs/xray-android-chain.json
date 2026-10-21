@@ -11,14 +11,48 @@
   },
   "inbounds": [
     {
-      "tag": "socks-in",
-      "port": 10808,
+      "tag": "warp-socks",
+      "port": 1080,
       "listen": "0.0.0.0",
       "protocol": "socks",
       "settings": {
         "auth": "noauth",
         "udp": true
       }
+    },
+    {
+      "tag": "warp-http",
+      "port": 1081,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": { "auth": "noauth" }
+    },    {
+      "tag": "socks1-in",
+      "port": 1082,
+      "listen": "0.0.0.0",
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true }
+    },
+    {
+      "tag": "http1-in",
+      "port": 1083,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": { "auth": "noauth" }
+    },
+    {
+      "tag": "socks2-in",
+      "port": 1084,
+      "listen": "0.0.0.0",
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true }
+    },
+    {
+      "tag": "http2-in",
+      "port": 1085,
+      "listen": "0.0.0.0",
+      "protocol": "http",
+      "settings": { "auth": "noauth" }
     }
   ],
   "outbounds": [
@@ -29,6 +63,24 @@
         "servers": [
           {
             "address": "SOCKS1_SERVER_IP_OR_DOMAIN",
+            "port": 1080,
+            "users": []
+          }
+        ]
+      },
+      "streamSettings": {
+        "sockopt": {
+          "dialerProxy": "warp-out"
+        }
+      }
+    },
+    {
+      "tag": "chain-socks-2",
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "SOCKS2_SERVER_IP_OR_DOMAIN",
             "port": 1080,
             "users": []
           }
@@ -106,9 +158,20 @@
       {
         "type": "field",
         "inboundTag": [
-          "socks-in"
+          "warp-socks",
+          "warp-https"
         ],
+        "outboundTag": "warp-out"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["socks1-in", "http1-in"],
         "outboundTag": "chain-socks-1"
+      },
+      {
+        "type": "field",
+        "inboundTag": ["socks2-in", "http2-in"],
+        "outboundTag": "chain-socks-2"
       }
     ]
   }
