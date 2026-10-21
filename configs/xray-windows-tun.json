@@ -3,11 +3,48 @@
     "loglevel": "warning"
   },
   "dns": {
+    "hosts": {
+      "geosite:category-ads-all": [
+        "0.0.0.0",
+        "::"
+      ]
+    },
     "servers": [
-      "https://1.1.1.1/dns-query",
-      "https://[2606:4700:4700::1111]/dns-query"
+      {
+        "address": "217.218.127.127",
+        "port": 53,
+        "network": "udp",
+        "domains": [
+          "geosite:ir",
+          "domain:ir"
+        ],
+        "expectIPs": [
+          "geoip:ir"
+        ],
+        "skipFallback": true
+      },
+      {
+        "address": "192.168.1.1",
+        "port": 53,
+        "network": "udp",
+        "domains": [
+          "geosite:private",
+          "domain:local",
+          "domain:lan",
+          "domain:home.arpa"
+        ],
+        "expectIPs": [
+          "geoip:private"
+        ],
+        "skipFallback": true
+      },
+      "https://cloudflare-dns.com/dns-query",
+      "2606:4700:4700::1111",
+      "2606:4700:4700::1001",
+      "1.1.1.1",
+      "1.0.0.1"
     ],
-    "queryStrategy": "UseIP"
+    "queryStrategy": "UseIPv6v4"
   },
   "inbounds": [
     {
@@ -19,53 +56,54 @@
         "desc": "Wintun",
         "mtu": 1280,
         "gateway": [
-          "YOUR_VIRTUAL_IPV4_HERE/32",
-          "YOUR_VIRTUAL_IPV6_HERE/128"
+          "YOUR_VIRTUAL_IPV6_HERE/128",
+          "YOUR_VIRTUAL_IPV4_HERE/32"
         ],
         "dns": [
-          "1.1.1.1",
-          "2606:4700:4700::1111"
+          "::1",
+          "127.0.0.1"
         ],
         "autoSystemRoutingTable": [
-          "0.0.0.0/0",
-          "::/0"
+          "::/0",
+          "0.0.0.0/0"
         ],
         "autoOutboundsInterface": "auto"
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": true
       }
     },
     {
-      "tag": "socks-in",
-      "port": 1080,
-      "listen": "0.0.0.0",
-      "protocol": "socks",
+      "tag": "dns-in",
+      "port": 53,
+      "listen": "::",
+      "protocol": "dokodemo-door",
       "settings": {
-        "auth": "noauth",
-        "udp": true
-      }
-    },
-    {
-      "tag": "http-in",
-      "port": 1081,
-      "listen": "0.0.0.0",
-      "protocol": "http",
-      "settings": {
-        "auth": "noauth"
+        "address": "1.1.1.1",
+        "port": 53,
+        "network": "tcp,udp"
       }
     }
   ],
   "outbounds": [
+    {
+      "tag": "dns-out",
+      "protocol": "dns"
+    },
     {
       "tag": "warp-out",
       "protocol": "wireguard",
       "settings": {
         "secretKey": "YOUR_PRIVATE_KEY_HERE",
         "address": [
-          "YOUR_VIRTUAL_IPV4_HERE/32",
-          "YOUR_VIRTUAL_IPV6_HERE/128"
+          "YOUR_VIRTUAL_IPV6_HERE/128",
+          "YOUR_VIRTUAL_IPV4_HERE/32"
         ],
         "reserved": [0, 0, 0],
         "mtu": 1280,
-        "noKernelTun": false,
+        "noKernelTun": true,
         "peers": [
           {
             "endpoint": "CLEAN_WARP_ENDPOINT_IP:PORT",
@@ -76,14 +114,31 @@
       },
       "streamSettings": {
         "sockopt": {
-          "dialerProxy": "udp-noise"
+          "dialerProxy": "udp-noise",
+          "domainStrategy": "UseIPv6v4"
         }
       }
     },
     {
       "tag": "direct",
       "protocol": "freedom",
-      "settings": {}
+      "settings": {
+        "domainStrategy": "UseIPv6v4"
+      },
+      "streamSettings": {
+        "sockopt": {
+          "domainStrategy": "UseIPv6v4"
+        }
+      }
+    },
+    {
+      "tag": "block",
+      "protocol": "blackhole",
+      "settings": {
+        "response": {
+          "type": "none"
+        }
+      }
     },
     {
       "tag": "udp-noise",
@@ -104,6 +159,27 @@
     "rules": [
       {
         "type": "field",
+        "outboundTag": "block",
+        "domain": [
+          "geosite:category-ads-all"
+        ]
+      },
+      {
+        "type": "field",
+        "inboundTag": ["dns-in"],
+        "outboundTag": "dns-out"
+      },
+      {
+        "type": "field",
+        "outboundTag": "direct",
+        "ip": [
+          "217.218.127.127",
+          "192.168.1.1"
+        ],
+        "port": "53"
+      },
+      {
+        "type": "field",
         "outboundTag": "direct",
         "ip": [
           "geoip:private",
@@ -114,16 +190,17 @@
         "type": "field",
         "outboundTag": "direct",
         "domain": [
-          "geosite:ir"
+          "geosite:ir",
+          "domain:ir",
+          "geosite:private",
+          "domain:local",
+          "domain:lan",
+          "domain:home.arpa"
         ]
       },
       {
         "type": "field",
-        "inboundTag": [
-          "tun-in",
-          "socks-in",
-          "http-in"
-        ],
+        "inboundTag": ["tun-in"],
         "outboundTag": "warp-out"
       }
     ]
